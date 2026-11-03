@@ -2,7 +2,7 @@
 
 Tài liệu này dẫn bạn viết lại project từ con số 0. Mỗi bước có bốn phần:
 
-- **Làm gì:** các file cần tạo.
+- **Cần làm:** những việc cần phải hoàn thành ở từng bước.
 - **Kết quả:** thứ chạy được hoặc kiểm chứng được sau bước đó.
 - **Kiến thức dùng:** những gì cần biết để làm bước đó.
 - **Học được:** điều đọng lại, và câu hỏi phỏng vấn liên quan.
@@ -14,7 +14,7 @@ Gõ lệnh trong thư mục `freertos_mock`.
 
 ## Bước 0 — Chuẩn bị môi trường
 
-**Làm gì**
+**Cần làm**
 - Cài w64devkit (gcc + make) vào `C:\w64devkit`, thêm `C:\w64devkit\bin` vào PATH, mở lại terminal.
 - Tạo cây thư mục:
   ```
@@ -31,7 +31,7 @@ Gõ lệnh trong thư mục `freertos_mock`.
 
 ## Bước 1 — Makefile và test framework tối giản
 
-**Làm gì**
+**Cần làm**
 - [Makefile](Makefile): các target `all`, `lib`, `demo`, `run`, `test`, `clean`.
 - [tests/test_framework.h/.c](tests/test_framework.h): macro `TEST_ASSERT`, `TEST_ASSERT_EQ`, `RUN_TEST`, hàm `test_framework_report()`.
 - [tests/test_main.c](tests/test_main.c): hàm `main` gọi từng suite và trả về mã lỗi.
@@ -50,7 +50,7 @@ Gõ lệnh trong thư mục `freertos_mock`.
 
 ## Bước 2 — Kiểu dữ liệu, mã lỗi, cấu hình
 
-**Làm gì**
+**Cần làm**
 - [include/os_types.h](include/os_types.h): `os_tick_t`, `os_priority_t`, enum `os_status_t`, hàm `os_status_to_string()` (cài trong [os_status.c](src/core/os_status.c)).
 - [include/os_config.h](include/os_config.h): `OS_CFG_MAX_TASKS`, `OS_CFG_MAX_QUEUES`, `OS_ASSERT`... mỗi macro bọc trong `#ifndef` để ghi đè từ dòng lệnh.
 
@@ -64,7 +64,7 @@ Gõ lệnh trong thư mục `freertos_mock`.
 
 ## Bước 3 — Intrusive linked list
 
-**Làm gì**
+**Cần làm**
 - [src/core/os_list.h/.c](src/core/os_list.h): danh sách liên kết đôi vòng có node sentinel, node nằm trong struct chủ. Gồm `push_back`, `insert_sorted` (ổn định), `remove` O(1), `pop_front`, macro `OS_CONTAINER_OF`.
 - [tests/test_list.c](tests/test_list.c): thêm `RUN_TEST` vào suite mới.
 
@@ -73,13 +73,12 @@ Gõ lệnh trong thư mục `freertos_mock`.
 **Kiến thức dùng:** con trỏ và con trỏ-tới-con trỏ, `offsetof`, ép kiểu qua `char *` để tính địa chỉ struct chủ, con trỏ hàm làm tiêu chí so sánh (`os_list_less_fn_t`).
 
 **Học được:** vì sao node sentinel loại bỏ mọi `if` cho trường hợp danh sách rỗng, và vì sao cách "node nằm trong object" không cần cấp phát. Đây là cùng kỹ thuật với `list_head` của Linux.
-*Phỏng vấn:* "Giải thích `container_of`." / "Chèn có thứ tự mà giữ đúng FIFO cho phần tử bằng nhau thế nào?" (dừng ở phần tử đầu tiên *lớn hơn hẳn*, không phải *lớn hơn hoặc bằng*).
 
 ---
 
 ## Bước 4 — Port layer và so sánh tick an toàn
 
-**Làm gì**
+**Cần làm**
 - [include/os_port.h](include/os_port.h): giao diện với phần cứng, gồm `os_port_get_tick`, `os_port_idle`, `os_port_enter_critical`, `os_port_exit_critical`.
 - [src/port/sim/](src/port/sim/os_port_sim.c): đồng hồ ảo, chỉ là một biến `s_tick`, có hàm `set_tick`, `advance`.
 - [src/port/host/os_port_host.c](src/port/host/os_port_host.c): đồng hồ thật (`QueryPerformanceCounter` trên Windows, `clock_gettime` trên POSIX).
@@ -92,13 +91,13 @@ Gõ lệnh trong thư mục `freertos_mock`.
 **Học được:**
 - Tách phần phụ thuộc phần cứng ra một lớp nhỏ thì core test được trên PC và port được lên MCU.
 - Tick 32-bit tràn sau 49.7 ngày. Dùng `(int32_t)(now - deadline) >= 0` thay vì `now >= deadline`.
-*Phỏng vấn:* "Port kernel này lên STM32 cần viết những gì?"
+
 
 ---
 
 ## Bước 5 — Block pool: free list in-place
 
-**Làm gì**
+**Cần làm**
 - [src/core/os_block_pool.h/.c](src/core/os_block_pool.c): chia vùng nhớ thành block đều nhau, block rảnh lưu con trỏ `next` ngay trong nó. Có `init`, `alloc` O(1), `free` O(1), `owns` (kiểm tra con trỏ hợp lệ), phát hiện double-free bằng marker.
 
 **Kết quả:** một bộ cấp phát không dùng `malloc`, không bị phân mảnh. Các bước sau tái sử dụng nó cho TCB, queue và mempool.
@@ -106,13 +105,14 @@ Gõ lệnh trong thư mục `freertos_mock`.
 **Kiến thức dùng:** `memcpy` để đọc/ghi node (tránh vi phạm strict aliasing), `uintptr_t` để tính toán địa chỉ, `alignof`, `_Static_assert`, kiểm tra biên và căn chỉnh của con trỏ.
 
 **Học được:** cách chặn con trỏ rác ở O(1) (nằm trong vùng pool *và* đúng biên block), và bài toán double-free: kiểm tra nhanh trước, chỉ tốn O(n) khi có nghi ngờ.
+
 *Phỏng vấn:* "Memory pool khác heap thế nào? Vì sao embedded thích dùng?"
 
 ---
 
 ## Bước 6 — Task và opaque pointer
 
-**Làm gì**
+**Cần làm**
 - [include/os_task.h](include/os_task.h): `typedef struct os_task *os_task_handle_t;` (chỉ khai báo, không định nghĩa), `os_task_config_t`, các hàm create/delete/suspend/resume/notify/get_info.
 - [src/core/os_task_internal.h](src/core/os_task_internal.h): định nghĩa thật của TCB, chỉ file trong `src/core` được include.
 - [src/core/os_task.c](src/core/os_task.c): pool TCB, kiểm tra handle hợp lệ, máy trạng thái task.
@@ -129,7 +129,7 @@ Gõ lệnh trong thư mục `freertos_mock`.
 
 ## Bước 7 — Scheduler (trái tim của project)
 
-**Làm gì**
+**Cần làm**
 - [src/core/os_sched_internal.h](src/core/os_sched_internal.h): giao diện giữa scheduler và task.
 - [src/core/os_scheduler.c](src/core/os_scheduler.c) gồm:
   - hai danh sách: *ready* (sắp theo ưu tiên) và *delayed* (sắp theo thời điểm release);
@@ -147,13 +147,13 @@ Gõ lệnh trong thư mục `freertos_mock`.
 - `next_release += period` (không dùng `now + period`) để chu kỳ không bị trôi.
 - Vì sao chạy bù mọi lần trễ sẽ làm đói task thấp, nên chọn bỏ qua và đếm overrun.
 - Cách test code phụ thuộc thời gian bằng đồng hồ ảo.
-*Phỏng vấn:* câu hỏi hay nhất của project: "Cooperative khác preemptive?", "Độ phức tạp của scheduler?", "Task chạy lâu thì sao?"
+
 
 ---
 
 ## Bước 8 — Message queue
 
-**Làm gì**
+**Cần làm**
 - [include/os_queue.h](include/os_queue.h) và [src/core/os_queue.c](src/core/os_queue.c): ring buffer lưu item theo giá trị, storage do người dùng cấp. Có `send`, `receive`, `peek`, `count`, `space`, `set_receiver` (gửi xong thì đánh thức task nhận).
 - [src/core/os_queue_internal.h](src/core/os_queue_internal.h): `os_queue_on_task_deleted()` để gỡ liên kết khi task bị xóa.
 - [tests/test_queue.c](tests/test_queue.c).
@@ -168,7 +168,7 @@ Gõ lệnh trong thư mục `freertos_mock`.
 
 ## Bước 9 — Memory pool công khai và zero-copy
 
-**Làm gì**
+**Cần làm**
 - [include/os_mempool.h](include/os_mempool.h) và [src/core/os_mempool.c](src/core/os_mempool.c): bọc block pool thành API cho ứng dụng. Số block tính từ kích thước storage, block làm tròn theo `max_align_t`, có `get_info` với watermark, macro `OS_MEMPOOL_DECLARE_STORAGE`.
 - Chuyển TCB pool và queue pool sang dùng `os_block_pool` (refactor: các test cũ phải vẫn pass).
 - [tests/test_mempool.c](tests/test_mempool.c).
@@ -178,13 +178,14 @@ Gõ lệnh trong thư mục `freertos_mock`.
 **Kiến thức dùng:** `alignof`/`max_align_t`, macro tính kích thước làm tròn lên bội số, refactor có lưới an toàn là test.
 
 **Học được:** zero-copy và quy tắc *ownership* (gửi xong không được chạm, nhận xong phải free), watermark để cỡ pool, và vì sao refactor an toàn nhờ test đã có.
-*Phỏng vấn:* "Lwip dùng memory pool vì sao?", "Double free phát hiện thế nào?"
+
+*Phỏng vấn:* "Double free phát hiện thế nào?"
 
 ---
 
 ## Bước 10 — Ứng dụng demo nhiều lớp
 
-**Làm gì** (thư mục [examples/demo/](examples/demo/))
+**Cần làm** (thư mục [examples/demo/](examples/demo/))
 - Lớp phần cứng giả lập: `bsp_led`, `bsp_temp_sensor`.
 - Lớp tiện ích: `app_log` (log kèm timestamp), `app_messages.h` (định nghĩa frame).
 - Lớp ứng dụng: `app_blink`, `app_sensor` (producer), `app_logger` (consumer), `app_supervisor` (kịch bản suspend/resume/delete/stop).
@@ -200,7 +201,7 @@ Gõ lệnh trong thư mục `freertos_mock`.
 
 ## Bước 11 — Kiểm tra chất lượng và đóng gói
 
-**Làm gì**
+**Cần làm**
 - Build thêm cấu hình release: `make BUILD=release all test`. Cấu hình này thường lộ cảnh báo mà debug không có.
 - `make SANITIZE=1 test` (ASan + UBSan, chạy trên Linux/macOS hoặc WSL).
 - `make check` (cppcheck) và `make format` ([.clang-format](.clang-format)) nếu đã cài các công cụ này.
@@ -233,8 +234,9 @@ Gõ lệnh trong thư mục `freertos_mock`.
 
 ## Gợi ý khi tự làm lại
 
-1. **Tự viết trước, so với mã mẫu sau.** Mỗi bước đọc phần "Làm gì" rồi tự viết file, sau đó mới mở file mẫu so sánh.
+0. Cần phải tìm hiểu qua trước các thuật ngữ cơ cản của RTOS như scheduler, task, memory pool là gì?
+1. **Tự viết trước, so với mã mẫu sau.** Mỗi bước đọc phần "Cần làm" rồi tự viết file, sau đó mới mở file mẫu so sánh.
 2. **Viết test trước hoặc cùng lúc** với mã của bước đó, không để dồn lại.
 3. **Mỗi bước một commit**, ví dụ `step 3: intrusive list + tests`.
 4. **Sau mỗi bước tự trả lời** các câu "Phỏng vấn" bằng lời của mình, không nhìn tài liệu.
-5. Đã hiểu hết thì làm các hướng mở rộng: bitmap ưu tiên O(1), software timer, tickless idle, port lên STM32.
+5. Đã hiểu hết thì làm các hướng mở rộng: bitmap ưu tiên O(1), software timer, tickless idle, port lên ESP32.
